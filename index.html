@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkSentinel | Threat Intelligence</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --panel-bg: #161b22;
+      --border-color: #30363d;
+      --text-main: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent-blue: #58a6ff;
+      --danger: #f85149;
+      --warning: #d29922;
+      --safe: #3fb950;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      color: var(--accent-blue);
+      margin: 0;
+      font-size: 2.5rem;
+      letter-spacing: 1px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .dashboard {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 30px;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 12px 15px;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent-blue);
+    }
+
+    button {
+      background-color: var(--accent-blue);
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #3182ce;
+    }
+
+    /* Results Section */
+    #results {
+      display: none; /* Hidden until a scan is run */
+      border-top: 1px solid var(--border-color);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+
+    .score-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--bg-color);
+      padding: 20px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .score-box h3 {
+      margin: 0 0 5px 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+    }
+
+    .score-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .status-badge {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+    }
+
+    /* Dynamic Colors */
+    .status-safe { color: var(--safe); }
+    .status-suspicious { color: var(--warning); }
+    .status-dangerous { color: var(--danger); }
+
+    .bg-safe { background-color: rgba(63, 185, 80, 0.1); border: 1px solid var(--safe); }
+    .bg-suspicious { background-color: rgba(210, 153, 34, 0.1); border: 1px solid var(--warning); }
+    .bg-dangerous { background-color: rgba(248, 81, 73, 0.1); border: 1px solid var(--danger); }
+
+    .findings-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .findings-list li {
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+
+    .findings-list li::before {
+      content: "⚠️";
+      margin-right: 10px;
+    }
+
+    /* Loading state */
+    #loading {
+      display: none;
+      text-align: center;
+      color: var(--accent-blue);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🛡️ LinkSentinel</h1>
+    <p>Automated Phishing & Threat Intelligence Scanner</p>
+  </div>
+
+  <div class="dashboard">
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="Paste a suspicious URL here (e.g., http://paypal-login-secure.xyz)" autocomplete="off">
+      <button onclick="scanUrl()" id="scanBtn">Scan URL</button>
+    </div>
+
+    <div id="loading">Analyzing URL against global threat intelligence databases...</div>
+
+    <div id="results">
+      <div class="score-container">
+        <div class="score-box">
+          <h3>Risk Score</h3>
+          <p class="score-value" id="riskScore">0<span style="font-size: 1rem; color: var(--text-muted);">/100</span></p>
+        </div>
+        <div class="status-badge" id="statusBadge">SAFE</div>
+      </div>
+
+      <h3 style="color: var(--text-main); margin-bottom: 10px;">Analysis Findings:</h3>
+      <ul class="findings-list" id="findingsList">
+        <!-- Findings will be injected here -->
+      </ul>
+    </div>
+
+    <!-- History Section -->
+    <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="color: var(--text-main); margin: 0;">Recent Scans:</h3>
+        <button onclick="clearHistory()" style="background-color: var(--danger); font-size: 0.8rem; padding: 8px 12px;">Clear History</button>
+      </div>
+      <ul class="findings-list" id="historyList">
+        <!-- History will be injected here -->
+      </ul>
+    </div>
+
+  </div>
+
+  <script>
+    async function scanUrl() {
+      const urlInput = document.getElementById('urlInput').value.trim();
+      const scanBtn = document.getElementById('scanBtn');
+      const loading = document.getElementById('loading');
+      const results = document.getElementById('results');
+
+      if (!urlInput) {
+        alert("Please enter a URL to scan.");
+        return;
+      }
+
+      // UI state: Loading
+      scanBtn.disabled = true;
+      scanBtn.innerText = "Scanning...";
+      loading.style.display = "block";
+      results.style.display = "none";
+
+      try {
+        // Send POST request to our backend API
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url: urlInput })
+        });
+
+        const data = await response.json();
+
+        // 1. Update the UI with the results
+        displayResults(data);
+        
+        // 2. Refresh the history list below
+        fetchHistory(); 
+
+      } catch (error) {
+        alert("Error connecting to the server. Make sure your backend is running.");
+        console.error(error);
+      } finally {
+        // Reset UI state
+        scanBtn.disabled = false;
+        scanBtn.innerText = "Scan URL";
+        loading.style.display = "none";
+      }
+    }
+
+    function displayResults(data) {
+      const results = document.getElementById('results');
+      const riskScore = document.getElementById('riskScore');
+      const statusBadge = document.getElementById('statusBadge');
+      const findingsList = document.getElementById('findingsList');
+
+      // Reset classes
+      riskScore.className = 'score-value';
+      statusBadge.className = 'status-badge';
+      
+      // Update Score and Status
+      riskScore.innerHTML = `${data.riskScore}<span style="font-size: 1rem; color: var(--text-muted);">/100</span>`;
+      
+      let statusClass = '';
+      let bgClass = '';
+
+      if (data.status === "DANGEROUS") {
+        statusClass = 'status-dangerous';
+        bgClass = 'bg-dangerous';
+        riskScore.classList.add('status-dangerous');
+      } else if (data.status === "SUSPICIOUS") {
+        statusClass = 'status-suspicious';
+        bgClass = 'bg-suspicious';
+        riskScore.classList.add('status-suspicious');
+      } else {
+        statusClass = 'status-safe';
+        bgClass = 'bg-safe';
+        riskScore.classList.add('status-safe');
+      }
+
+      statusBadge.innerText = data.status;
+      statusBadge.classList.add(statusClass, bgClass);
+
+      // Clear old findings and add new ones
+      findingsList.innerHTML = '';
+      data.findings.forEach(finding => {
+        const li = document.createElement('li');
+        li.innerText = finding;
+        findingsList.appendChild(li);
+      });
+
+      // Show results section
+      results.style.display = 'block';
+    }
+
+    // Function to fetch history from database
+    async function fetchHistory() {
+      try {
+        const response = await fetch('/api/history');
+        const data = await response.json();
+        const historyList = document.getElementById('historyList');
+        
+        historyList.innerHTML = ''; // Clear old list
+        
+        if (data.length === 0) {
+          historyList.innerHTML = '<li style="color: var(--text-muted);">No scan history yet.</li>';
+          return;
+        }
+
+        data.forEach(scan => {
+          const li = document.createElement('li');
+          // Style the text based on status
+          let color = "var(--safe)";
+          if (scan.status === "DANGEROUS") color = "var(--danger)";
+          if (scan.status === "SUSPICIOUS") color = "var(--warning)";
+          
+          li.innerHTML = `<span style="color: ${color}; font-weight: bold; margin-right: 10px;">[${scan.status}]</span> ${scan.url}`;
+          
+          // Stop the warning emoji from showing up on history items
+          li.style.setProperty('--emoji', 'none'); 
+          
+          historyList.appendChild(li);
+        });
+      } catch (error) {
+        console.error("Failed to load history:", error);
+      }
+    }
+
+    // Function to clear history
+    async function clearHistory() {
+      // Ask for confirmation first
+      if (!confirm("Are you sure you want to delete all scan history?")) return;
+
+      try {
+        const response = await fetch('/api/history', {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          fetchHistory(); // Refresh the list to show it's empty
+        }
+      } catch (error) {
+        console.error("Failed to clear history:", error);
+      }
+    }
+
+    // Call this when the page loads so history shows up immediately
+    window.onload = fetchHistory;
+  </script>
+</body>
+</html>
