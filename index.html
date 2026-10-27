@@ -197,6 +197,14 @@
         <div class="status-badge" id="statusBadge">SAFE</div>
       </div>
 
+      <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: var(--text-muted); font-size: 0.9rem;">Scanned Domain:</span>
+          <strong id="domainDisplay" style="color: var(--accent-blue); font-size: 1.1rem; margin-left: 10px;">example.com</strong>
+        </div>
+        <button onclick="copyReport()" style="background-color: var(--border-color); font-size: 0.8rem; padding: 8px 12px;">Copy Report</button>
+      </div>
+
       <h3 style="color: var(--text-main); margin-bottom: 10px;">Analysis Findings:</h3>
       <ul class="findings-list" id="findingsList">
         <!-- Findings will be injected here -->
@@ -294,6 +302,11 @@
       }
 
       statusBadge.innerText = data.status;
+            // Show the extracted domain
+      document.getElementById('domainDisplay').innerText = data.domain;
+      
+      // Store the full data globally so the copy function can access it
+      window.lastScanData = data;
       statusBadge.classList.add(statusClass, bgClass);
 
       // Clear old findings and add new ones
@@ -357,6 +370,28 @@
       } catch (error) {
         console.error("Failed to clear history:", error);
       }
+    }
+
+    // Function to copy the report to clipboard
+    function copyReport() {
+      if (!window.lastScanData) return;
+      const data = window.lastScanData;
+      
+      let report = `--- LinkSentinel Threat Report ---\n`;
+      report += `Target URL: ${data.url}\n`;
+      report += `Domain: ${data.domain}\n`;
+      report += `Risk Score: ${data.riskScore}/100 (${data.status})\n`;
+      
+      if (data.resolvedUrl) {
+        report += `Real Destination: ${data.resolvedUrl}\n`;
+      }
+      
+      report += `\nFindings:\n`;
+      data.findings.forEach(f => { report += `- ${f}\n`; });
+      
+      navigator.clipboard.writeText(report).then(() => {
+        alert("Report copied to clipboard!");
+      });
     }
 
     // Call this when the page loads so history shows up immediately
